@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestione Gasolio</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,Arial,sans-serif;margin:0;background:#f4f6f8;color:#222}
+header{background:#1f4e79;color:#fff;padding:12px 16px}h1{margin:0;font-size:1.3em}
+nav{display:flex;gap:4px;padding:8px 8px 0;background:#1f4e79}nav button{flex:1;border:0;padding:10px;background:#3a6ea5;color:#fff;border-radius:8px 8px 0 0;font-weight:600;cursor:pointer}
+nav button.on{background:#f4f6f8;color:#1f4e79}main{padding:12px;max-width:1000px;margin:auto}
+.card{background:#fff;border-radius:10px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px #0002}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}.row label{display:flex;flex-direction:column;font-size:.85em;flex:1;min-width:130px}
+input,button{font:inherit;padding:8px;border:1px solid #bbb;border-radius:6px}button{cursor:pointer;background:#e9eef4}
+.pri{background:#1f4e79;color:#fff;border-color:#1f4e79}table{width:100%;border-collapse:collapse;font-size:.92em}
+th,td{border:1px solid #ccc;padding:6px;text-align:left}th{background:#dde7f1}td.n,th.n{text-align:right}
+.tot{font-size:1.2em;font-weight:700;color:#1f4e79}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+footer{font-size:.8em;color:#555;text-align:center;padding:16px}.sm{padding:4px 8px;font-size:.85em}
+#pt{display:none}
+@media print{header,nav,.np,footer{display:none!important}body{background:#fff}.card{box-shadow:none}#pt{display:block}}
+</style></head><body>
+<header><h1>⛽ Gestione Gasolio</h1></header>
+<nav id="tabs"></nav>
+<main>
+<div class="card"><h2 id="pt"></h2>
+<div class="row np"><label>SEMANA: <input type="week" id="wk"></label><button onclick="shiftW(-1)">◀</button><button onclick="shiftW(1)">▶</button><button onclick="window.print()">🖨️ Stampa settimana</button></div>
+<p>Totale settimana: <span class="tot" id="wt">0</span> L</p></div>
+<div class="card np"><h3 id="ft">Nuovo rifornimento</h3><div class="row">
+<label>FECHA<input type="date" id="f"></label><label>MATRICULA<input id="m" placeholder="1234ABC"></label>
+<label>REPOSTADOR<input id="r"></label><label>CANTIDAD (L)<input type="number" step="0.01" min="0" id="q"></label>
+<button class="pri" onclick="save()" id="sb">Aggiungi</button><button onclick="resetF()">Annulla</button></div></div>
+<div class="card"><table><thead><tr><th>FECHA</th><th>MATRICULA</th><th>REPOSTADOR</th><th class="n">CANTIDAD (L)</th><th class="np"></th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="grid np"><div class="card"><h3>Riepilogo per matrícula</h3><table><thead><tr><th>MATRICULA</th><th class="n">Settimana (L)</th><th class="n">Totale (L)</th></tr></thead><tbody id="sm"></tbody></table></div>
+<div class="card"><h3>Riepilogo per mese</h3><table><thead><tr><th>Mese</th><th class="n">Litri</th></tr></thead><tbody id="mo"></tbody></table></div></div>
+<div class="card np"><h3>Totali per prodotto (settimana / tutto)</h3><table><tbody id="pr"></tbody></table></div>
+<div class="card np"><h3>Dati e backup</h3><div class="row">
+<button onclick="xls()">📊 Export Excel (CSV ;) prodotto</button><button onclick="csvAll()">Export CSV tutto</button><button onclick="jsonOut()">Backup JSON</button>
+<label>Importa JSON/CSV<input type="file" accept=".json,.csv" onchange="imp(this)"></label></div></div>
+</main>
+<footer>I dati restano salvati solo nel browser di questo dispositivo (localStorage) e non sono condivisi tra dispositivi, salvo export/import del backup.</footer>
+<script>
+const P={ADBLUE:'AdBlue',GASOLEO_B:'Gasóleo B',GASOLEO_A:'Gasóleo A'},K='gestioneGasolio_v1';
+let D=JSON.parse(localStorage.getItem(K)||'{}');for(const p in P)D[p]=D[p]||[];
+let cur='ADBLUE',ed=null;const $=i=>document.getElementById(i);
+const st=()=>localStorage.setItem(K,JSON.stringify(D));
+function isoW(ds){const d=new Date(ds+'T12:00:00');d.setDate(d.getDate()+3-(d.getDay()+6)%7);const w1=new Date(d.getFullYear(),0,4);return d.getFullYear()+'-W'+String(1+Math.round(((d-w1)/864e5-3+(w1.getDay()+6)%7)/7)).padStart(2,'0')}
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+function wStart(w){const[y,n]=w.split('-W').map(Number);const j=new Date(y,0,4);const m=new Date(j);m.setDate(j.getDate()-(j.getDay()+6)%7+(n-1)*7);return m}
+function shiftW(k){const m=wStart($('wk').value);m.setDate(m.getDate()+7*k+3);$('wk').value=isoW(m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0')+'-'+String(m.getDate()).padStart(2,'0'));render()}
+const fmt=n=>n.toLocaleString('it-IT',{maximumFractionDigits:2});const esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+const fd=s=>s.split('-').reverse().join('/');
+function render(){
+$('tabs').innerHTML=Object.keys(P).map(p=>`<button class="${p==cur?'on':''}" onclick="cur='${p}';resetF();render()">${P[p]}</button>`).join('');
+const w=$('wk').value,a=D[cur],wr=a.filter(x=>isoW(x.f)==w).sort((x,y)=>x.f.localeCompare(y.f));
+const s=wStart(w),e=new Date(s);e.setDate(s.getDate()+6);
+$('pt').textContent=P[cur].toUpperCase()+' — SEMANA: '+w+' ('+s.toLocaleDateString('it-IT')+' – '+e.toLocaleDateString('it-IT')+')';
+$('tb').innerHTML=wr.map(x=>`<tr><td>${fd(x.f)}</td><td>${esc(x.m)}</td><td>${esc(x.r)}</td><td class="n">${fmt(x.q)}</td><td class="np"><button class="sm" onclick="edit('${x.id}')">✏️</button> <button class="sm" onclick="del('${x.id}')">🗑️</button></td></tr>`).join('')||'<tr><td colspan="5" style="color:#888">Nessun rifornimento in questa settimana</td></tr>';
+$('wt').textContent=fmt(wr.reduce((t,x)=>t+x.q,0));
+const bm={};a.forEach(x=>{const k=x.m.toUpperCase();bm[k]=bm[k]||[0,0];bm[k][1]+=x.q;if(isoW(x.f)==w)bm[k][0]+=x.q});
+$('sm').innerHTML=Object.keys(bm).sort().map(k=>`<tr><td>${esc(k)}</td><td class="n">${fmt(bm[k][0])}</td><td class="n">${fmt(bm[k][1])}</td></tr>`).join('');
+const mo={};a.forEach(x=>{const k=x.f.slice(0,7);mo[k]=(mo[k]||0)+x.q});
+$('mo').innerHTML=Object.keys(mo).sort().reverse().map(k=>`<tr><td>${new Date(k+'-15').toLocaleDateString('it-IT',{month:'long',year:'numeric'})}</td><td class="n">${fmt(mo[k])}</td></tr>`).join('');
+$('pr').innerHTML=Object.keys(P).map(p=>`<tr><td>${P[p]}</td><td class="n">${fmt(D[p].filter(x=>isoW(x.f)==w).reduce((t,x)=>t+x.q,0))} L</td><td class="n">${fmt(D[p].reduce((t,x)=>t+x.q,0))} L</td></tr>`).join('');}
+function save(){const f=$('f').value,m=$('m').value.trim().toUpperCase(),r=$('r').value.trim(),q=parseFloat($('q').value);
+if(!f||!m||!(q>0))return alert('Compila fecha, matrícula e cantidad (> 0)');
+if(ed){Object.assign(D[cur].find(x=>x.id==ed),{f,m,r,q})}else D[cur].push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),f,m,r,q});
+st();$('wk').value=isoW(f);resetF();render()}
+function edit(id){const x=D[cur].find(x=>x.id==id);ed=id;$('f').value=x.f;$('m').value=x.m;$('r').value=x.r;$('q').value=x.q;$('sb').textContent='Salva modifica';$('ft').textContent='Modifica rifornimento';scrollTo(0,0)}
+function del(id){if(confirm('Eliminare questa riga?')){D[cur]=D[cur].filter(x=>x.id!=id);st();render()}}
+function resetF(){ed=null;$('f').value=today();$('m').value=$('r').value=$('q').value='';$('sb').textContent='Aggiungi';$('ft').textContent='Nuovo rifornimento'}
+function dl(n,c,t){const b=new Blob([c],{type:t});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download=n;l.click()}
+const cq=s=>'"'+String(s).replace(/"/g,'""')+'"';
+function xls(){const r=[...D[cur]].sort((a,b)=>a.f.localeCompare(b.f));dl(cur+'.csv','\ufeff'+['SEMANA;FECHA;MATRICULA;REPOSTADOR;CANTIDAD (L)',...r.map(x=>[isoW(x.f),fd(x.f),cq(x.m),cq(x.r),String(x.q).replace('.',',')].join(';'))].join('\r\n'),'text/csv')}
+function csvAll(){const L=['PRODUCTO;FECHA;MATRICULA;REPOSTADOR;CANTIDAD (L)'];for(const p in P)D[p].forEach(x=>L.push([p,x.f,cq(x.m),cq(x.r),String(x.q).replace('.',',')].join(';')));dl('gasolio_tutto.csv','\ufeff'+L.join('\r\n'),'text/csv')}
+function jsonOut(){dl('gasolio_backup_'+today()+'.json',JSON.stringify(D,null,1),'application/json')}
+function imp(inp){const fl=inp.files[0];if(!fl)return;fl.text().then(t=>{try{let n;if(fl.name.endsWith('.json')){n=JSON.parse(t);for(const p in P)if(!Array.isArray(n[p]))n[p]=[]}else{n={};for(const p in P)n[p]=[];t.replace(/^\ufeff/,'').split(/\r?\n/).slice(1).forEach(l=>{if(!l.trim())return;const c=l.split(';').map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));let p=c[0],f=c[1];if(!P[p]){p=cur;f=c[1]}if(/\//.test(f))f=f.split('/').reverse().join('-');n[p].push({id:Math.random().toString(36).slice(2),f,m:c[2],r:c[3],q:parseFloat(c[4].replace(',','.'))})})}
+if(confirm('Unire ai dati esistenti? (Annulla = sostituire tutto)')){for(const p in P){const ids=new Set(D[p].map(x=>x.id));n[p].forEach(x=>{if(!ids.has(x.id))D[p].push(x)})}}else D=n;st();render();alert('Importazione completata')}catch(e){alert('File non valido: '+e.message)}inp.value=''})}
+$('wk').value=isoW(today());$('wk').onchange=render;resetF();render();
+</script></body></html>
