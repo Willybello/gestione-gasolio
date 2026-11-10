@@ -1,75 +1,305 @@
 <!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gestione Gasolio</title>
+<title>Gestione Gasolio – registro e scadenziario</title>
 <style>
 *{box-sizing:border-box}body{font-family:system-ui,Arial,sans-serif;margin:0;background:#f4f6f8;color:#222}
-header{background:#1f4e79;color:#fff;padding:12px 16px}h1{margin:0;font-size:1.3em}
-nav{display:flex;gap:4px;padding:8px 8px 0;background:#1f4e79}nav button{flex:1;border:0;padding:10px;background:#3a6ea5;color:#fff;border-radius:8px 8px 0 0;font-weight:600;cursor:pointer}
-nav button.on{background:#f4f6f8;color:#1f4e79}main{padding:12px;max-width:1000px;margin:auto}
-.card{background:#fff;border-radius:10px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px #0002}
+header{background:#1f4e79;color:#fff;padding:12px 16px}h1{margin:0;font-size:1.3em}h2{font-size:1.15em;margin:.2em 0 .6em}h3{font-size:1em;margin:.2em 0 .6em}
+nav{display:flex;flex-wrap:wrap;gap:4px;padding:8px 8px 0;background:#1f4e79}nav button{flex:1;min-width:110px;border:0;padding:10px;background:#3a6ea5;color:#fff;border-radius:8px 8px 0 0;font-weight:600;cursor:pointer}
+nav button.on{background:#f4f6f8;color:#1f4e79}main{padding:12px;max-width:1200px;margin:auto}
+.sub{display:flex;gap:4px;margin-bottom:8px}.sub button.on{background:#1f4e79;color:#fff}
+.card{background:#fff;border-radius:10px;padding:12px;margin-bottom:12px;box-shadow:0 1px 3px #0002;overflow-x:auto}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}.row label{display:flex;flex-direction:column;font-size:.85em;flex:1;min-width:130px}
-input,button{font:inherit;padding:8px;border:1px solid #bbb;border-radius:6px}button{cursor:pointer;background:#e9eef4}
-.pri{background:#1f4e79;color:#fff;border-color:#1f4e79}table{width:100%;border-collapse:collapse;font-size:.92em}
-th,td{border:1px solid #ccc;padding:6px;text-align:left}th{background:#dde7f1}td.n,th.n{text-align:right}
-.tot{font-size:1.2em;font-weight:700;color:#1f4e79}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-footer{font-size:.8em;color:#555;text-align:center;padding:16px}.sm{padding:4px 8px;font-size:.85em}
+input,button,select,textarea{font:inherit;padding:7px;border:1px solid #bbb;border-radius:6px}button{cursor:pointer;background:#e9eef4}
+.pri{background:#1f4e79;color:#fff;border-color:#1f4e79}table{width:100%;border-collapse:collapse;font-size:.88em}
+th,td{border:1px solid #ccc;padding:5px;text-align:left;vertical-align:top}th{background:#dde7f1}td.n,th.n{text-align:right;white-space:nowrap}
+tr.tA td:first-child{border-left:4px solid #1f77b4}tr.tB td:first-child{border-left:4px solid #2ca02c}
+.tot{font-size:1.2em;font-weight:700;color:#1f4e79}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+footer{font-size:.8em;color:#555;text-align:center;padding:16px}.sm{padding:3px 7px;font-size:.85em}
+.bad{background:#fde2e1}.warn{background:#fff4d6}.ok{background:#e6f4ea}.info{background:#eef3fb}
+.badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:.8em;font-weight:600}
+.bA{background:#d7e8f7;color:#0d4a80}.bB{background:#d8f0dc;color:#1d6b2c}.bDoc{background:#e6f4ea;color:#1d6b2c}.bSt{background:#fff4d6;color:#7a5600}.bIp{background:#fff4d6;color:#7a5600}.bVer{background:#e6f4ea;color:#1d6b2c}
+#alerts div{padding:8px 12px;border-radius:8px;margin-bottom:6px}.muted{color:#666;font-size:.85em}
 #pt{display:none}
-@media print{header,nav,.np,footer{display:none!important}body{background:#fff}.card{box-shadow:none}#pt{display:block}}
+@media print{header,nav,.np,footer,#alerts{display:none!important}body{background:#fff}.card{box-shadow:none}#pt{display:block}}
 </style></head><body>
-<header><h1>⛽ Gestione Gasolio</h1></header>
+<header><h1>⛽ Gestione Gasolio – registro fatture, rifornimenti e scadenziario</h1></header>
 <nav id="tabs"></nav>
 <main>
+<div id="alerts"></div>
+
+<!-- CRUSCOTTO -->
+<section id="s-home"></section>
+
+<!-- FATTURE -->
+<section id="s-fatt">
+<div class="card np"><h2 id="fft">Nuova fattura (una riga per consegna e prodotto)</h2>
+<div class="row">
+<label>Data fattura<input type="date" id="fa_f" onchange="fSugg()"></label>
+<label>Data consegna<input type="date" id="fa_cons"></label>
+<label>Numero fattura<input id="fa_num"></label>
+<label>Rif. interno<input id="fa_rif" placeholder="S-…"></label>
+<label>Fornitore<input id="fa_forn" list="fornList"></label><datalist id="fornList"></datalist>
+<label>Tipo<select id="fa_tipo"><option value="A">Gasóleo A (trattori)</option><option value="B">Gasóleo B (frigo)</option></select></label>
+</div><div class="row" style="margin-top:6px">
+<label>Litri<input type="number" step="0.01" min="0" id="fa_l" oninput="fCalc()"></label>
+<label>Imponibile €<input type="number" step="0.01" id="fa_imp" oninput="fCalc()"></label>
+<label>Aliquota IVA %<input type="number" step="0.01" id="fa_ivaP" oninput="fCalc()"></label>
+<label>IVA € (vuoto = calcola)<input type="number" step="0.01" id="fa_ivaE" oninput="fCalc(1)"></label>
+<label>Totale € (vuoto = calcola)<input type="number" step="0.01" id="fa_tot" oninput="fCalc(1)"></label>
+<label>P.Un. in fattura (IVA incl.)<input type="number" step="0.0001" id="fa_pu"></label>
+</div><div class="row" style="margin-top:6px">
+<label>Scadenza pagamento<input type="date" id="fa_scad"></label>
+<label>Stato<select id="fa_stato"><option>da pagare</option><option>pagato</option><option>presunto pagato</option><option>da verificare</option></select></label>
+<label>Dato<select id="fa_fonte"><option value="documentato">documentato (dalla fattura)</option><option value="stima">stima / provvisorio</option></select></label>
+<label style="flex:3">Note (mai IBAN o dati bancari)<input id="fa_note"></label>
+</div>
+<p class="muted" id="fa_calc"></p>
+<div class="row"><button class="pri" onclick="fSave()" id="fa_sb">Aggiungi fattura</button><button onclick="fReset()">Annulla</button></div></div>
+<div class="card"><div class="row np"><label>Anno<select id="fa_y" onchange="render()"></select></label><label>Tipo<select id="fa_ft" onchange="render()"><option value="">A e B</option><option value="A">Solo A</option><option value="B">Solo B</option></select></label><label>Stato<select id="fa_fs" onchange="render()"><option value="">tutti</option><option>da pagare</option><option>pagato</option><option>presunto pagato</option><option>da verificare</option></select></label><button onclick="csvFatt()">Esporta CSV fatture</button></div>
+<p class="muted">Prezzo netto = imponibile ÷ litri. Prezzo lordo = totale ÷ litri (IVA inclusa). Mese = mese della consegna.</p>
+<div id="fa_tab"></div></div>
+</section>
+
+<!-- RIFORNIMENTI -->
+<section id="s-rif">
+<div class="sub np" id="rtabs"></div>
 <div class="card"><h2 id="pt"></h2>
-<div class="row np"><label>SEMANA: <input type="week" id="wk"></label><button onclick="shiftW(-1)">◀</button><button onclick="shiftW(1)">▶</button><button onclick="window.print()">🖨️ Stampa settimana</button></div>
+<div class="row np"><label>SETTIMANA<input type="week" id="wk"></label><button onclick="shiftW(-1)">◀</button><button onclick="shiftW(1)">▶</button><button onclick="window.print()">🖨️ Stampa settimana</button></div>
 <p>Totale settimana: <span class="tot" id="wt">0</span> L</p></div>
 <div class="card np"><h3 id="ft">Nuovo rifornimento</h3><div class="row">
-<label>FECHA<input type="date" id="f"></label><label>MATRICULA<input id="m" placeholder="1234ABC"></label>
-<label>REPOSTADOR<input id="r"></label><label>CANTIDAD (L)<input type="number" step="0.01" min="0" id="q"></label>
-<button class="pri" onclick="save()" id="sb">Aggiungi</button><button onclick="resetF()">Annulla</button></div></div>
-<div class="card"><table><thead><tr><th>FECHA</th><th>MATRICULA</th><th>REPOSTADOR</th><th class="n">CANTIDAD (L)</th><th class="np"></th></tr></thead><tbody id="tb"></tbody></table></div>
-<div class="grid np"><div class="card"><h3>Riepilogo per matrícula</h3><table><thead><tr><th>MATRICULA</th><th class="n">Settimana (L)</th><th class="n">Totale (L)</th></tr></thead><tbody id="sm"></tbody></table></div>
+<label>FECHA (data)<input type="date" id="f"></label><label>MATRICULA (targa)<input id="m" placeholder="1234ABC" list="targheList"></label><datalist id="targheList"></datalist>
+<label>REPOSTADOR (autista)<input id="r"></label><label>CANTIDAD (litri)<input type="number" step="0.01" min="0" id="q"></label>
+<label>Km contachilometri (facoltativo)<input type="number" step="1" min="0" id="km"></label>
+<button class="pri" onclick="save()" id="sb">Aggiungi</button><button onclick="resetF()">Annulla</button></div>
+<p class="muted">Per il consumo L/100 km inserisci i km a ogni pieno: il calcolo usa i litri del pieno successivo diviso i km percorsi.</p></div>
+<div class="card"><table><thead><tr><th>FECHA</th><th>MATRICULA</th><th>REPOSTADOR</th><th class="n">CANTIDAD (L)</th><th class="n">Km</th><th class="np"></th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="grid np"><div class="card"><h3>Riepilogo per targa</h3><table><thead><tr><th>MATRICULA</th><th class="n">Settimana (L)</th><th class="n">Totale (L)</th></tr></thead><tbody id="sm"></tbody></table></div>
 <div class="card"><h3>Riepilogo per mese</h3><table><thead><tr><th>Mese</th><th class="n">Litri</th></tr></thead><tbody id="mo"></tbody></table></div></div>
 <div class="card np"><h3>Totali per prodotto (settimana / tutto)</h3><table><tbody id="pr"></tbody></table></div>
-<div class="card np"><h3>Dati e backup</h3><div class="row">
-<button onclick="xls()">📊 Export Excel (CSV ;) prodotto</button><button onclick="csvAll()">Export CSV tutto</button><button onclick="jsonOut()">Backup JSON</button>
-<label>Importa JSON/CSV<input type="file" accept=".json,.csv" onchange="imp(this)"></label></div></div>
+</section>
+
+<!-- RIEPILOGHI -->
+<section id="s-riep"></section>
+
+<!-- SCADENZE -->
+<section id="s-scad"></section>
+
+<!-- CONTROLLI -->
+<section id="s-ctrl"></section>
+
+<!-- DATI -->
+<section id="s-dati">
+<div class="card"><h2>Dati e backup</h2>
+<p>I dati restano solo nel browser di questo dispositivo (localStorage). Per passarli su un altro dispositivo esporta il backup JSON e importalo lì.</p>
+<div class="row">
+<button onclick="jsonOut()">💾 Backup JSON completo</button>
+<label>Importa JSON (backup o dati iniziali) o CSV rifornimenti<input type="file" accept=".json,.csv" onchange="imp(this)"></label>
+</div>
+<div class="row" style="margin-top:8px"><button onclick="xls()">📊 CSV del prodotto selezionato nei Rifornimenti</button><button onclick="csvAll()">CSV di tutti i rifornimenti</button><button onclick="csvFatt()">CSV fatture</button><button onclick="csvMese()">CSV riepilogo mensile</button><button onclick="csvCtrl()">CSV controlli</button><button onclick="csvScad()">CSV scadenze</button></div>
+</div>
+<div class="card"><h3>Impostazioni dei controlli</h3><div class="row">
+<label>Capienza cisterna A (L)<input type="number" id="set_cap"></label>
+<label>Variazione prezzo netto da segnalare (%)<input type="number" step="0.1" id="set_pr"></label>
+<label>Buco consegne A da segnalare (giorni senza consegne, oltre)<input type="number" id="set_gap"></label>
+<label>Scostamento consumo per targa da segnalare (%)<input type="number" id="set_cons"></label>
+<button class="pri" onclick="saveSet()">Salva impostazioni</button></div></div>
+<div class="card"><h3>Svuota tutto</h3><p class="muted">Cancella tutti i dati da questo browser. Fai prima un backup.</p><button onclick="if(confirm('Cancellare TUTTI i dati da questo browser?')){localStorage.removeItem(K);location.reload()}">🗑️ Cancella tutti i dati</button></div>
+</section>
 </main>
-<footer>I dati restano salvati solo nel browser di questo dispositivo (localStorage) e non sono condivisi tra dispositivi, salvo export/import del backup.</footer>
+<footer>I dati restano salvati solo nel browser di questo dispositivo (localStorage) e non sono condivisi tra dispositivi, salvo export/import del backup. Non inserire mai IBAN o coordinate bancarie.</footer>
 <script>
+/* ---------- dati e compatibilità ---------- */
 const P={ADBLUE:'AdBlue',GASOLEO_B:'Gasóleo B',GASOLEO_A:'Gasóleo A'},K='gestioneGasolio_v1';
-let D=JSON.parse(localStorage.getItem(K)||'{}');for(const p in P)D[p]=D[p]||[];
-let cur='ADBLUE',ed=null;const $=i=>document.getElementById(i);
+const TABS={home:'Cruscotto',fatt:'Fatture',rif:'Rifornimenti',riep:'Riepiloghi',scad:'Scadenze',ctrl:'Controlli',dati:'Dati e backup'};
+const TN={A:'Gasóleo A',B:'Gasóleo B'};
+/* Scadenze e tipi da fonti ufficiali pubbliche (nessun dato aziendale). Aggiornato al 10/11/2026. */
+const FIS_DEF=[
+ {id:'g-rel-2026-11',data:'2026-12-07',titolo:'Relazione mensile delle erogazioni dal deposito proprio – novembre 2026',descr:'Solo se il deposito è iscritto come instalación de consumo propio (CAE). Si presenta nella sede elettronica AEAT entro una settimana dalla fine del mese. Serve anche per l’ayuda extraordinaria di novembre.',fonte:'AEAT – Instalaciones de consumo propio',url:'https://sede.agenciatributaria.gob.es/Sede/impuestos-especiales-medioambientales/devoluciones-gasoleo-profesional/instalaciones-consumo-propio.html',stato:'verificato',fatto:false},
+ {id:'g-rel-2026-12',data:'2027-01-07',titolo:'Relazione mensile delle erogazioni dal deposito proprio – dicembre 2026',descr:'Come sopra, per le erogazioni di dicembre 2026.',fonte:'AEAT – Instalaciones de consumo propio',url:'https://sede.agenciatributaria.gob.es/Sede/impuestos-especiales-medioambientales/devoluciones-gasoleo-profesional/instalaciones-consumo-propio.html',stato:'verificato',fatto:false},
+ {id:'g-ipc-ott',data:'2026-11-13',titolo:'INE pubblica l’IPC di ottobre: decide l’ayuda di dicembre (0,19 / 0,12 / 0,05 €/L)',descr:'L’importo dell’ayuda per le erogazioni di dicembre dipende dal tipo d’imposta che scatta con la salvaguardia IPC. La data di pubblicazione INE è indicativa.',fonte:'BOE – RDL 25/2026, art. 28',url:'https://www.boe.es/buscar/act.php?id=BOE-A-2026-20265',stato:'ipotesi',fatto:false},
+ {id:'g-art30',data:'2026-12-31',titolo:'Ultimo giorno per chiedere l’ayuda per i veicoli SENZA diritto al gasóleo profesional (art. 30 RDL 25/2026)',descr:'Riguarda solo titolari di autorizzazioni VDE, VT, VTC, VSE, MDLE, MDPE per veicoli che non possono avere la devolución (per esempio furgoni sotto le 7,5 t). Domanda nella sede AEAT dal 1/11 al 31/12/2026. Da verificare se l’azienda ha veicoli di questo tipo.',fonte:'BOE – RDL 25/2026, art. 30.4',url:'https://www.boe.es/buscar/act.php?id=BOE-A-2026-20265',stato:'verificato',fatto:false},
+ {id:'g-fine0',data:'2026-12-31',titolo:'Fine della devolución a 0 €: dal 1/1/2027 dovrebbe tornare a 49 € ogni 1.000 L',descr:'L’art. 16 del RDL 25/2026 fissa la devolución a 0 € fino al 31/12/2026. Il ritorno a 49 €/1.000 L è un’ipotesi: servono conferme su nuove proroghe.',fonte:'BOE – RDL 25/2026, art. 16; AEAT – Importe de la devolución',url:'https://sede.agenciatributaria.gob.es/Sede/impuestos-especiales-medioambientales/devoluciones-gasoleo-profesional/informacion-general/importe-devolucion.html',stato:'ipotesi',fatto:false},
+ {id:'g-303-4t',data:'2027-01-30',titolo:'IVA del 4º trimestre 2026 (modelo 303): l’IVA delle fatture del gasolio si detrae qui',descr:'Termine ordinario per il 4º trimestre. Se l’azienda presenta l’IVA mensile (SII o REDEME) le date sono diverse: da verificare con la gestoría.',fonte:'AEAT – Plazos de presentación IVA',url:'https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/manual-iva-2026/capitulo-08-gestion-iva/autoliquidaciones-iva/plazos-presentacion.html',stato:'ipotesi',fatto:false},
+ {id:'g-347',data:'2027-02-28',titolo:'Modelo 347: dichiarare le ayudas al gasolio ricevute nel 2026',descr:'Se l’azienda ha ricevuto ayudas, l’ente pagatore da indicare è l’AEAT (NIF Q2826000H). Il 347 si presenta a febbraio.',fonte:'AEAT – Preguntas frecuentes ayuda gasóleo profesional',url:'https://sede.agenciatributaria.gob.es/Sede/todas-gestiones/beneficios-fiscales-autorizaciones/medidas-tributari_____ica-derivada-conflicto-belico-medio/ayuda-sufragar-precio-gasoleo-consumido-devolucion/preguntas-frecuentes.html',stato:'verificato',fatto:false}
+];
+const TIPI=[
+ ['01/01–21/03/2026','49 € ogni 1.000 L (4,9 c€/L)','—','verificato','AEAT – Importe de la devolución','https://sede.agenciatributaria.gob.es/Sede/impuestos-especiales-medioambientales/devoluciones-gasoleo-profesional/informacion-general/importe-devolucion.html'],
+ ['22/03–30/06/2026','0 € (a giugno 49 €/1.000 L solo se l’IPC carburanti di aprile non superava il +15%)','0,20 €/L','verificato (giugno da confermare)','BOE RDL 7/2026 art. 39; AEAT art. 55','https://sede.agenciatributaria.gob.es/Sede/todas-gestiones/beneficios-fiscales-autorizaciones/medidas-tributari_____ica-derivada-conflicto-belico-medio/ayuda-sufragar-precio-gasoleo-consumido-devolucion/preguntas-frecuentes.html'],
+ ['luglio 2026','0 €','0,10 €/L','verificato','AEAT – RDL 18/2026 (art. 8 e 22)','https://sede.agenciatributaria.gob.es/Sede/todas-gestiones/beneficios-fiscales-autorizaciones/medidas-tributari_____ica-derivada-conflicto-belico-medio/ayuda-sufragar-precio-gasoleo-consumido-devolucion/nota-informativa-18.html'],
+ ['agosto 2026','0 €','0,15 €/L (0,05 se scatta la salvaguardia)','importo effettivo da confermare','AEAT – RDL 18/2026','https://sede.agenciatributaria.gob.es/Sede/todas-gestiones/beneficios-fiscales-autorizaciones/medidas-tributari_____ica-derivada-conflicto-belico-medio/ayuda-sufragar-precio-gasoleo-consumido-devolucion/nota-informativa-18.html'],
+ ['settembre 2026','0 €','0,05 €/L (salvaguardia attivata)','da fonte di settore (FROET), coerente con l’AEAT','FROET 17/08/2026; AEAT RDL 18/2026','https://www.froet.es/la-ayuda-directa-al-gasoleo-profesional-se-reducira-a-5-centimos-por-litro-en-septiembre-en-lugar-de-los-20ct-inicialmente-previstos/'],
+ ['ottobre 2026','0 €','0,05 €/L','verificato','BOE – RDL 25/2026 (art. 16 e 28)','https://www.boe.es/buscar/act.php?id=BOE-A-2026-20265'],
+ ['novembre 2026','0 € (confermato)','0,05 €/L (l’AEAT indica la riduzione d’imposta di 20 c€, che riduce l’ayuda da 0,12 a 0,05)','devolución verificata; ayuda dedotta da AEAT + BOE','AEAT 20/10/2026; BOE RDL 25/2026 art. 28','https://sede.agenciatributaria.gob.es/Sede/impuestos-especiales-medioambientales/novedades-impuestos-especiales-medioambientales/2026/octubre/20/medidas-tributarias-impuesto-sobre-hidrocarburos-medio_.html'],
+ ['dicembre 2026','0 €','0,19, 0,12 o 0,05 €/L secondo l’IPC di ottobre','da verificare a metà novembre','BOE – RDL 25/2026 art. 28','https://www.boe.es/buscar/act.php?id=BOE-A-2026-20265']
+];
+function blank(){return{ADBLUE:[],GASOLEO_B:[],GASOLEO_A:[],FATTURE:[],FISCALE:[],META:{}}}
+function norm(n){const b=blank();for(const k in b){if(k=='META')b.META=Object.assign({},n&&n.META||{});else b[k]=Array.isArray(n&&n[k])?n[k]:[]}return b}
+let D=norm(JSON.parse(localStorage.getItem(K)||'{}'));
+function ensureDef(){const ids=new Set(D.FISCALE.map(x=>x.id)),del=new Set(D.META.fisDel||[]);FIS_DEF.forEach(x=>{if(!ids.has(x.id)&&!del.has(x.id))D.FISCALE.push(Object.assign({},x))})}
+ensureDef();
+const M=()=>Object.assign({capienzaA:5000,sogliaPrezzo:3,sogliaBuchiA:8,sogliaConsumo:15},D.META);
+let tab=location.hash.slice(1)||'home';if(!TABS[tab])tab='home';
+let cur='GASOLEO_A',ed=null,fed=null;const $=i=>document.getElementById(i);
 const st=()=>localStorage.setItem(K,JSON.stringify(D));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+/* ---------- utilità ---------- */
 function isoW(ds){const d=new Date(ds+'T12:00:00');d.setDate(d.getDate()+3-(d.getDay()+6)%7);const w1=new Date(d.getFullYear(),0,4);return d.getFullYear()+'-W'+String(1+Math.round(((d-w1)/864e5-3+(w1.getDay()+6)%7)/7)).padStart(2,'0')}
-const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const today=()=>iso(new Date());
+const addD=(s,n)=>{const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)};
+const dd=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);
 function wStart(w){const[y,n]=w.split('-W').map(Number);const j=new Date(y,0,4);const m=new Date(j);m.setDate(j.getDate()-(j.getDay()+6)%7+(n-1)*7);return m}
-function shiftW(k){const m=wStart($('wk').value);m.setDate(m.getDate()+7*k+3);$('wk').value=isoW(m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0')+'-'+String(m.getDate()).padStart(2,'0'));render()}
-const fmt=n=>n.toLocaleString('it-IT',{maximumFractionDigits:2});const esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
-const fd=s=>s.split('-').reverse().join('/');
-function render(){
-$('tabs').innerHTML=Object.keys(P).map(p=>`<button class="${p==cur?'on':''}" onclick="cur='${p}';resetF();render()">${P[p]}</button>`).join('');
-const w=$('wk').value,a=D[cur],wr=a.filter(x=>isoW(x.f)==w).sort((x,y)=>x.f.localeCompare(y.f));
-const s=wStart(w),e=new Date(s);e.setDate(s.getDate()+6);
-$('pt').textContent=P[cur].toUpperCase()+' — SEMANA: '+w+' ('+s.toLocaleDateString('it-IT')+' – '+e.toLocaleDateString('it-IT')+')';
-$('tb').innerHTML=wr.map(x=>`<tr><td>${fd(x.f)}</td><td>${esc(x.m)}</td><td>${esc(x.r)}</td><td class="n">${fmt(x.q)}</td><td class="np"><button class="sm" onclick="edit('${x.id}')">✏️</button> <button class="sm" onclick="del('${x.id}')">🗑️</button></td></tr>`).join('')||'<tr><td colspan="5" style="color:#888">Nessun rifornimento in questa settimana</td></tr>';
-$('wt').textContent=fmt(wr.reduce((t,x)=>t+x.q,0));
-const bm={};a.forEach(x=>{const k=x.m.toUpperCase();bm[k]=bm[k]||[0,0];bm[k][1]+=x.q;if(isoW(x.f)==w)bm[k][0]+=x.q});
-$('sm').innerHTML=Object.keys(bm).sort().map(k=>`<tr><td>${esc(k)}</td><td class="n">${fmt(bm[k][0])}</td><td class="n">${fmt(bm[k][1])}</td></tr>`).join('');
-const mo={};a.forEach(x=>{const k=x.f.slice(0,7);mo[k]=(mo[k]||0)+x.q});
-$('mo').innerHTML=Object.keys(mo).sort().reverse().map(k=>`<tr><td>${new Date(k+'-15').toLocaleDateString('it-IT',{month:'long',year:'numeric'})}</td><td class="n">${fmt(mo[k])}</td></tr>`).join('');
-$('pr').innerHTML=Object.keys(P).map(p=>`<tr><td>${P[p]}</td><td class="n">${fmt(D[p].filter(x=>isoW(x.f)==w).reduce((t,x)=>t+x.q,0))} L</td><td class="n">${fmt(D[p].reduce((t,x)=>t+x.q,0))} L</td></tr>`).join('');}
-function save(){const f=$('f').value,m=$('m').value.trim().toUpperCase(),r=$('r').value.trim(),q=parseFloat($('q').value);
-if(!f||!m||!(q>0))return alert('Compila fecha, matrícula e cantidad (> 0)');
-if(ed){Object.assign(D[cur].find(x=>x.id==ed),{f,m,r,q})}else D[cur].push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),f,m,r,q});
-st();$('wk').value=isoW(f);resetF();render()}
-function edit(id){const x=D[cur].find(x=>x.id==id);ed=id;$('f').value=x.f;$('m').value=x.m;$('r').value=x.r;$('q').value=x.q;$('sb').textContent='Salva modifica';$('ft').textContent='Modifica rifornimento';scrollTo(0,0)}
-function del(id){if(confirm('Eliminare questa riga?')){D[cur]=D[cur].filter(x=>x.id!=id);st();render()}}
-function resetF(){ed=null;$('f').value=today();$('m').value=$('r').value=$('q').value='';$('sb').textContent='Aggiungi';$('ft').textContent='Nuovo rifornimento'}
+function shiftW(k){const m=wStart($('wk').value);m.setDate(m.getDate()+7*k+3);$('wk').value=isoW(iso(m));render()}
+const fmt=(n,d=2)=>(+n||0).toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:'always'});
+const fl=n=>(+n||0).toLocaleString('it-IT',{maximumFractionDigits:2,useGrouping:'always'});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const fd=s=>s?s.split('-').reverse().join('/'):'';
+const mName=k=>new Date(k+'-15').toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+const r2=x=>Math.round(x*100)/100;
+const mese=x=>(x.cons||x.f).slice(0,7);
+const ivaAttesa=d=>(d>='2026-03-22'&&d<='2026-06-30')?10:21; /* RDL 7/2026: carburanti al 10% dal 22/03 al 30/06/2026 */
+const hasBank=s=>/\bIBAN\b|\bES\d{2}[ \d]{18,}|\bSWIFT\b|\bBIC\b/i.test(s||'');
 function dl(n,c,t){const b=new Blob([c],{type:t});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download=n;l.click()}
-const cq=s=>'"'+String(s).replace(/"/g,'""')+'"';
-function xls(){const r=[...D[cur]].sort((a,b)=>a.f.localeCompare(b.f));dl(cur+'.csv','\ufeff'+['SEMANA;FECHA;MATRICULA;REPOSTADOR;CANTIDAD (L)',...r.map(x=>[isoW(x.f),fd(x.f),cq(x.m),cq(x.r),String(x.q).replace('.',',')].join(';'))].join('\r\n'),'text/csv')}
-function csvAll(){const L=['PRODUCTO;FECHA;MATRICULA;REPOSTADOR;CANTIDAD (L)'];for(const p in P)D[p].forEach(x=>L.push([p,x.f,cq(x.m),cq(x.r),String(x.q).replace('.',',')].join(';')));dl('gasolio_tutto.csv','\ufeff'+L.join('\r\n'),'text/csv')}
+const cq=s=>'"'+String(s??'').replace(/"/g,'""')+'"';const cn=x=>String(x??'').replace('.',',');
+function csv(n,rows){dl(n,'\ufeff'+rows.map(r=>r.map((v,i)=>typeof v=='number'?cn(v):cq(v)).join(';')).join('\r\n'),'text/csv')}
+/* ---------- calcoli ---------- */
+function fattSorted(){return[...D.FATTURE].sort((a,b)=>(a.cons||a.f).localeCompare(b.cons||b.f)||String(a.num).localeCompare(String(b.num)))}
+function perMese(){const o={};D.FATTURE.forEach(x=>{const k=mese(x)+'|'+x.tipo;const a=o[k]=o[k]||{l:0,imp:0,iva:0,tot:0,n:0,doc:0};a.l+=x.l;a.imp+=x.imp;a.iva+=x.ivaE;a.tot+=x.tot;a.n++;if(x.fonte!='stima')a.doc++});return o}
+function erogMese(p){const o={};D[p].forEach(x=>{const k=x.f.slice(0,7);o[k]=(o[k]||0)+x.q});return o}
+function saldoA(){const s=D.META.saldoA;if(!s||!s.data)return null;let v=+s.litri||0,acq=0,ero=0;
+ D.FATTURE.filter(x=>x.tipo=='A'&&(x.cons||x.f)>s.data).forEach(x=>acq+=x.l);D.GASOLEO_A.filter(x=>x.f>s.data).forEach(x=>ero+=x.q);return{v:v+acq-ero,acq,ero,base:s}}
+function consumi(){const by={};D.GASOLEO_A.forEach(x=>{(by[x.m.toUpperCase()]=by[x.m.toUpperCase()]||[]).push(x)});const res={};
+ for(const t in by){const a=by[t].sort((x,y)=>x.f.localeCompare(y.f)||(+x.km||0)-(+y.km||0));let last=null,acc=0;const iv=[];let L=0,KM=0;const err=[];
+  a.forEach(x=>{if(last)acc+=x.q;if(x.km>0){if(last){const k=x.km-last.km;if(k<=0)err.push(x);else{iv.push({da:last.f,a:x.f,km:k,l:acc,c:acc/k*100});L+=acc;KM+=k}}last=x;acc=0}});
+  res[t]={iv,L,KM,c:KM?L/KM*100:null,err,tot:a.reduce((s,x)=>s+x.q,0),n:a.length}}return res}
+/* ---------- controlli automatici ---------- */
+function controlli(){const out=[],m=M(),T=today();const add=(liv,cat,t)=>out.push({liv,cat,t});
+ const F=fattSorted();
+ F.forEach(x=>{const id=`${x.num} ${x.rif?'('+x.rif+') ':''}${TN[x.tipo]} consegna ${fd(x.cons||x.f)}`;
+  if(Math.abs(x.imp*x.ivaP/100-x.ivaE)>0.02)add('errore','IVA',`${id}: IVA ${fmt(x.ivaE)} € diversa da imponibile × ${x.ivaP}% = ${fmt(x.imp*x.ivaP/100)} €`);
+  if(Math.abs(x.imp+x.ivaE-x.tot)>0.02)add('errore','Totali',`${id}: imponibile + IVA = ${fmt(x.imp+x.ivaE)} € ma il totale è ${fmt(x.tot)} €`);
+  if(x.f&&x.f>='2026-01-01'&&x.f<='2026-12-31'&&x.ivaP!=ivaAttesa(x.f))add('avviso','IVA',`${id}: aliquota ${x.ivaP}% ma per la data ${fd(x.f)} ci si aspetta il ${ivaAttesa(x.f)}%`);
+  if(x.pu>0&&Math.abs(x.pu*x.l-x.tot)>2.5)add('info','Prezzo stampato',`${id}: P.Un. letto ${x.pu} × ${fl(x.l)} L = ${fmt(x.pu*x.l)} € contro un totale di ${fmt(x.tot)} € (${fmt(x.tot/x.l,4)} €/L). Probabile lettura imprecisa del P.Un.: controllare a vista.`);
+  if(x.f&&x.scad&&dd(x.f,x.scad)!=30)add('info','Scadenza',`${id}: scadenza ${fd(x.scad)} a ${dd(x.f,x.scad)} giorni dalla fattura (di solito 30)`);
+  if(x.stato=='da pagare'&&x.scad&&x.scad<T)add('errore','Pagamenti',`${id}: scaduta il ${fd(x.scad)} e segnata «da pagare»`);
+  if(!(x.l>0))add('errore','Dati',`${id}: litri mancanti`);
+  if(hasBank(x.note))add('errore','Privacy',`${id}: le note sembrano contenere dati bancari. Toglili.`)});
+ const seen={};F.forEach(x=>{const k=[x.num,x.tipo,x.cons||x.f,x.l,x.imp].join('|');if(seen[k])add('errore','Doppioni',`Possibile doppione: fattura ${x.num}, ${TN[x.tipo]}, ${fl(x.l)} L del ${fd(x.cons||x.f)}`);seen[k]=1});
+ const byNum={};F.forEach(x=>{(byNum[x.num]=byNum[x.num]||new Set()).add((x.forn||'')+'|'+x.f)});for(const n in byNum)if(byNum[n].size>1)add('avviso','Doppioni',`Il numero fattura ${n} compare con fornitori o date diverse`);
+ ['A','B'].forEach(t=>{let prev=null;F.filter(x=>x.tipo==t&&x.l>0).forEach(x=>{const n=x.imp/x.l;if(prev){const v=(n-prev.n)/prev.n*100;if(Math.abs(v)>m.sogliaPrezzo)add('avviso','Prezzo netto',`${TN[t]}: da ${fmt(prev.n,4)} €/L (${fd(prev.d)}) a ${fmt(n,4)} €/L (${fd(x.cons||x.f)}, fattura ${x.num}): ${v>0?'+':''}${fmt(v,1)}%`)}prev={n,d:x.cons||x.f}})});
+ const A=[...new Set(F.filter(x=>x.tipo=='A').map(x=>x.cons||x.f))].sort();for(let i=1;i<A.length;i++){const g=dd(A[i-1],A[i]);if(g>m.sogliaBuchiA)add('avviso','Buchi consegne',`Gasóleo A: nessuna consegna per ${g} giorni, dal ${fd(A[i-1])} al ${fd(A[i])}. Con circa 750 L al giorno una cisterna da ${fl(m.capienzaA)} L dura circa 6–7 giorni: forse manca una fattura, oppure c’è stato meno lavoro o rifornimenti altrove.`)}
+ if(F.length){const ms=[...new Set(F.map(mese))].sort();const first=ms[0],lastFull=T.slice(0,7);let k=first;const all=[];while(k<lastFull&&all.length<60){all.push(k);const d=new Date(k+'-15');d.setMonth(d.getMonth()+1);k=iso(d).slice(0,7)}
+  const pm=perMese();['A','B'].forEach(t=>{const miss=all.filter(x=>!pm[x+'|'+t]);if(miss.length)add('avviso','Mesi senza consegne',`${TN[t]}: nessuna consegna in ${miss.map(mName).join(', ')}${t=='B'?'. Il B dei frigo si compra altrove o la cisterna B è bastata?':''}`)});
+  all.forEach(x=>{const a=pm[x+'|A'],b=pm[x+'|B'];if(a&&b&&b.imp/b.l>a.imp/a.l)add('avviso','Prezzo netto',`${mName(x)}: il B costa più dell’A (${fmt(b.imp/b.l,4)} contro ${fmt(a.imp/a.l,4)} €/L)`)});
+  const eA=erogMese('GASOLEO_A');all.forEach(x=>{const a=pm[x+'|A'];if(eA[x]&&a&&Math.abs(eA[x]-a.l)/a.l>0.10)add('info','Cisterna A',`${mName(x)}: acquistati ${fl(a.l)} L, erogati ai camion ${fl(eA[x])} L (${fmt((eA[x]-a.l)/a.l*100,1)}%). Normale se il mese non è registrato tutto.`)})}
+ const s=saldoA();if(s&&(s.v<0||s.v>m.capienzaA))add('errore','Cisterna A',`Saldo stimato della cisterna A di ${fl(s.v)} L, fuori da 0–${fl(m.capienzaA)} L: mancano erogazioni o acquisti, o la lettura iniziale è sbagliata`);
+ const C=consumi(),kn=new Set((D.META.targhe||[]).map(x=>x.targa));for(const t in C){const c=C[t];c.err.forEach(x=>add('errore','Km',`${t}: km ${fl(x.km)} del ${fd(x.f)} non maggiori del rilevamento precedente`));
+  if(c.c&&c.iv.length>=3)c.iv.forEach(v=>{const dv=(v.c-c.c)/c.c*100;if(Math.abs(dv)>m.sogliaConsumo)add('avviso','Consumo per targa',`${t}: ${fmt(v.c,1)} L/100 km dal ${fd(v.da)} al ${fd(v.a)}, ${dv>0?'+':''}${fmt(dv,0)}% rispetto alla sua media di ${fmt(c.c,1)}`)});
+  if(kn.size&&!kn.has(t))add('info','Targhe',`${t}: targa non presente nell’elenco dei trattori propri. È un autonomo?`)}
+ ['GASOLEO_A','GASOLEO_B','ADBLUE'].forEach(p=>D[p].forEach(x=>{if(x.q>1200)add('avviso','Rifornimenti',`${P[p]}: ${fl(x.q)} L a ${x.m} il ${fd(x.f)}, quantità insolitamente alta per un solo mezzo`)}));
+ return out}
+function alerts(){const T=today(),a=[];D.FISCALE.filter(x=>!x.fatto&&x.data).forEach(x=>{const g=dd(T,x.data);if(g<0)a.push(['bad',`⚠️ Scadenza fiscale passata (${fd(x.data)}): ${x.titolo}`]);else if(g<30)a.push(['warn',`⏰ Tra ${g} giorni (${fd(x.data)}): ${x.titolo}`])});
+ const inv={};D.FATTURE.filter(x=>x.stato=='da pagare'&&x.scad).forEach(x=>{const k=x.num;inv[k]=inv[k]||{scad:x.scad,tot:0,forn:x.forn};inv[k].tot+=x.tot});
+ Object.entries(inv).forEach(([n,v])=>{const g=dd(T,v.scad);if(g<0)a.push(['bad',`💶 Fattura ${n} scaduta il ${fd(v.scad)}: ${fmt(v.tot)} €`]);else if(g<=7)a.push(['warn',`💶 Fattura ${n} scade il ${fd(v.scad)}: ${fmt(v.tot)} €`])});
+ $('alerts').innerHTML=a.map(x=>`<div class="${x[0]}">${esc(x[1])}</div>`).join('')}
+/* ---------- render ---------- */
+function render(){
+ $('tabs').innerHTML=Object.keys(TABS).map(k=>`<button class="${k==tab?'on':''}" onclick="tab='${k}';location.hash='${k}';render()">${TABS[k]}</button>`).join('');
+ for(const k in TABS)$('s-'+k).style.display=k==tab?'':'none';
+ alerts();({home:rHome,fatt:rFatt,rif:rRif,riep:rRiep,scad:rScad,ctrl:rCtrl,dati:rDati})[tab]()}
+function totTipo(t,y){const r={l:0,imp:0,iva:0,tot:0,n:0};D.FATTURE.filter(x=>x.tipo==t&&(!y||mese(x).startsWith(y))).forEach(x=>{r.l+=x.l;r.imp+=x.imp;r.iva+=x.ivaE;r.tot+=x.tot;r.n++});return r}
+function rHome(){const y=today().slice(0,4),s=saldoA(),c=controlli();const box=(t,r)=>`<div class="card"><h3><span class="badge b${t}">${TN[t]}</span> ${t=='A'?'trattori':'frigo dei rimorchi'} – anno ${y}</h3>${r.n?`<p>Litri acquistati: <b>${fl(r.l)}</b><br>Spesa netta (senza IVA): <b>${fmt(r.imp)} €</b><br>Totale IVA inclusa: ${fmt(r.tot)} €<br>Prezzo medio netto: <b>${fmt(r.imp/r.l,4)} €/L</b> · lordo ${fmt(r.tot/r.l,4)} €/L<br>Righe fattura: ${r.n}</p>`:'<p class="muted">Nessuna fattura registrata.</p>'}</div>`;
+ const daPag=D.FATTURE.filter(x=>x.stato=='da pagare').reduce((a,x)=>a+x.tot,0);
+ $('s-home').innerHTML=(D.FATTURE.length||D.GASOLEO_A.length?'':`<div class="card info"><h2>Benvenuto</h2><p>Il programma è vuoto. Per iniziare: vai su <b>Dati e backup</b> e importa il file JSON con i dati iniziali, oppure inserisci le fatture a mano nella scheda <b>Fatture</b>.</p></div>`)+
+ `<div class="grid">${box('A',totTipo('A',y))}${box('B',totTipo('B',y))}<div class="card"><h3>Cisterna A (${fl(M().capienzaA)} L)</h3>${s?`<p>Saldo stimato: <span class="tot">${fl(s.v)} L</span></p><p class="muted">Dalla lettura di ${fl(s.base.litri)} L del ${fd(s.base.data)}: + ${fl(s.acq)} L acquistati − ${fl(s.ero)} L erogati. È una stima: vale solo se registri tutte le erogazioni.</p>`:'<p class="muted">Imposta una lettura iniziale nella scheda Riepiloghi.</p>'}
+ <p>Da pagare: <b>${fmt(daPag)} €</b></p><p>Controlli: ${c.filter(x=>x.liv=='errore').length} errori, ${c.filter(x=>x.liv=='avviso').length} avvisi, ${c.filter(x=>x.liv=='info').length} note</p></div></div>`}
+function years(){const s=new Set(D.FATTURE.map(x=>mese(x).slice(0,4)));s.add(today().slice(0,4));return[...s].sort().reverse()}
+function rFatt(){const ys=years(),sel=$('fa_y').value;$('fa_y').innerHTML='<option value="">tutti</option>'+ys.map(y=>`<option${y==sel?' selected':''}>${y}</option>`).join('');
+ $('fornList').innerHTML=[...new Set(D.FATTURE.map(x=>x.forn))].map(f=>`<option value="${esc(f)}">`).join('');
+ const y=$('fa_y').value,t=$('fa_ft').value,s=$('fa_fs').value;const F=fattSorted().filter(x=>(!y||mese(x).startsWith(y))&&(!t||x.tipo==t)&&(!s||x.stato==s)).reverse();
+ let L={A:0,B:0},I={A:0,B:0},TT={A:0,B:0};F.forEach(x=>{L[x.tipo]+=x.l;I[x.tipo]+=x.imp;TT[x.tipo]+=x.tot});
+ $('fa_tab').innerHTML=`<table><thead><tr><th>Data fatt.</th><th>Consegna</th><th>Numero</th><th>Rif.</th><th>Fornitore</th><th>Tipo</th><th class="n">Litri</th><th class="n">Imponibile €</th><th class="n">IVA %</th><th class="n">IVA €</th><th class="n">Totale €</th><th class="n">Netto €/L</th><th class="n">Lordo €/L</th><th>Scadenza</th><th>Stato</th><th>Dato</th><th>Note</th><th class="np"></th></tr></thead><tbody>${F.map(x=>`<tr class="t${x.tipo}"><td>${fd(x.f)}</td><td>${fd(x.cons)}</td><td>${esc(x.num)}</td><td>${esc(x.rif)}</td><td>${esc(x.forn)}</td><td><span class="badge b${x.tipo}">${x.tipo}</span></td><td class="n">${fl(x.l)}</td><td class="n">${fmt(x.imp)}</td><td class="n">${fl(x.ivaP)}</td><td class="n">${fmt(x.ivaE)}</td><td class="n">${fmt(x.tot)}</td><td class="n">${x.l?fmt(x.imp/x.l,4):''}</td><td class="n">${x.l?fmt(x.tot/x.l,4):''}</td><td class="${x.stato=='da pagare'&&x.scad<today()?'bad':''}">${fd(x.scad)}</td><td><select class="sm np" onchange="setStato('${x.num}',this.value)">${['da pagare','pagato','presunto pagato','da verificare'].map(o=>`<option${o==x.stato?' selected':''}>${o}</option>`).join('')}</select></td><td><span class="badge ${x.fonte=='stima'?'bSt':'bDoc'}">${x.fonte=='stima'?'stima':'documentato'}</span></td><td class="muted">${esc(x.note)}</td><td class="np"><button class="sm" onclick="fEdit('${x.id}')">✏️</button> <button class="sm" onclick="fDel('${x.id}')">🗑️</button></td></tr>`).join('')||'<tr><td colspan="18" class="muted">Nessuna fattura</td></tr>'}</tbody>
+ <tfoot>${['A','B'].filter(k=>L[k]).map(k=>`<tr><th colspan="6">Totale ${TN[k]}</th><th class="n">${fl(L[k])}</th><th class="n">${fmt(I[k])}</th><th></th><th class="n">${fmt(TT[k]-I[k])}</th><th class="n">${fmt(TT[k])}</th><th class="n">${fmt(I[k]/L[k],4)}</th><th class="n">${fmt(TT[k]/L[k],4)}</th><th colspan="5"></th></tr>`).join('')}</tfoot></table>`}
+function setStato(num,v){if(!confirm(`Impostare «${v}» per tutte le righe della fattura ${num}?`))return render();D.FATTURE.filter(x=>x.num==num).forEach(x=>x.stato=v);st();render()}
+function fSugg(){const f=$('fa_f').value;if(!f)return;const set=(i,v)=>{const e=$(i);if(!e.value||e.dataset.auto=='1'){e.value=v;e.dataset.auto='1'}};set('fa_ivaP',ivaAttesa(f));set('fa_scad',addD(f,30));set('fa_cons',f);fCalc()}
+['fa_ivaP','fa_scad','fa_cons'].forEach(i=>$(i).addEventListener('input',()=>$(i).dataset.auto=''));
+function fCalc(man){const l=+$('fa_l').value,imp=+$('fa_imp').value,p=+$('fa_ivaP').value;let iva=$('fa_ivaE').value===''?r2(imp*p/100):+$('fa_ivaE').value;let tot=$('fa_tot').value===''?r2(imp+iva):+$('fa_tot').value;
+ let w='';if(imp&&Math.abs(imp*p/100-iva)>0.02)w+=' ⚠️ L’IVA non torna con imponibile × aliquota.';if(imp&&Math.abs(imp+iva-tot)>0.02)w+=' ⚠️ Imponibile + IVA diverso dal totale.';
+ $('fa_calc').textContent=l&&imp?`IVA ${fmt(iva)} € · Totale ${fmt(tot)} € · Netto ${fmt(imp/l,4)} €/L · Lordo ${fmt(tot/l,4)} €/L.${w}`:''}
+function fSave(){const g=i=>$(i).value.trim();const x={f:g('fa_f'),cons:g('fa_cons')||g('fa_f'),num:g('fa_num'),rif:g('fa_rif'),forn:g('fa_forn'),tipo:g('fa_tipo'),l:+g('fa_l'),imp:+g('fa_imp'),ivaP:+g('fa_ivaP'),pu:+g('fa_pu')||0,scad:g('fa_scad'),stato:g('fa_stato'),fonte:g('fa_fonte'),note:g('fa_note')};
+ x.ivaE=g('fa_ivaE')===''?r2(x.imp*x.ivaP/100):+g('fa_ivaE');x.tot=g('fa_tot')===''?r2(x.imp+x.ivaE):+g('fa_tot');
+ if(!x.f||!x.num||!x.forn||!(x.l>0)||!(x.imp>0))return alert('Compila data, numero, fornitore, litri e imponibile');
+ if(hasBank(x.note))return alert('Non inserire IBAN o coordinate bancarie nel registro.');
+ if(!fed&&D.FATTURE.some(y=>y.num==x.num&&y.tipo==x.tipo&&(y.cons||y.f)==x.cons&&y.l==x.l)&&!confirm('Esiste già una riga uguale (stesso numero, tipo, consegna e litri). Salvare lo stesso?'))return;
+ if(fed)Object.assign(D.FATTURE.find(y=>y.id==fed),x);else D.FATTURE.push(Object.assign({id:uid()},x));st();fReset();render()}
+function fEdit(id){const x=D.FATTURE.find(y=>y.id==id);fed=id;['fa_ivaP','fa_scad','fa_cons'].forEach(i=>$(i).dataset.auto='');['f','cons','num','rif','forn','tipo','l','imp','ivaP','ivaE','tot','pu','scad','stato','fonte','note'].forEach(k=>$('fa_'+k).value=x[k]??'');$('fa_sb').textContent='Salva modifica';$('fft').textContent='Modifica fattura';fCalc();scrollTo(0,0)}
+function fDel(id){if(confirm('Eliminare questa riga di fattura?')){D.FATTURE=D.FATTURE.filter(x=>x.id!=id);st();render()}}
+function fReset(){fed=null;['fa_ivaP','fa_scad','fa_cons'].forEach(i=>$(i).dataset.auto='1');['f','cons','num','rif','l','imp','ivaP','ivaE','tot','pu','scad','note'].forEach(k=>$('fa_'+k).value='');$('fa_f').value=today();$('fa_stato').value='da pagare';$('fa_fonte').value='documentato';const last=fattSorted().pop();$('fa_forn').value=last?last.forn:'';$('fa_sb').textContent='Aggiungi fattura';$('fft').textContent='Nuova fattura (una riga per consegna e prodotto)';$('fa_calc').textContent='';fSugg()}
+function rRif(){$('rtabs').innerHTML=Object.keys(P).map(p=>`<button class="${p==cur?'on':''}" onclick="cur='${p}';resetF();render()">${P[p]}</button>`).join('');
+ $('targheList').innerHTML=[...new Set([...(D.META.targhe||[]).map(x=>x.targa),...Object.keys(P).flatMap(p=>D[p].map(x=>x.m))])].map(t=>`<option value="${esc(t)}">`).join('');
+ const w=$('wk').value,a=D[cur],wr=a.filter(x=>isoW(x.f)==w).sort((x,y)=>x.f.localeCompare(y.f));const s=wStart(w),e=new Date(s);e.setDate(s.getDate()+6);
+ $('pt').textContent=P[cur].toUpperCase()+' — SEMANA: '+w+' ('+s.toLocaleDateString('it-IT')+' – '+e.toLocaleDateString('it-IT')+')';
+ $('tb').innerHTML=wr.map(x=>`<tr><td>${fd(x.f)}</td><td>${esc(x.m)}</td><td>${esc(x.r)}</td><td class="n">${fl(x.q)}</td><td class="n">${x.km?fl(x.km):''}</td><td class="np"><button class="sm" onclick="edit('${x.id}')">✏️</button> <button class="sm" onclick="del('${x.id}')">🗑️</button></td></tr>`).join('')||'<tr><td colspan="6" style="color:#888">Nessun rifornimento in questa settimana</td></tr>';
+ $('wt').textContent=fl(wr.reduce((t,x)=>t+x.q,0));const bm={};a.forEach(x=>{const k=x.m.toUpperCase();bm[k]=bm[k]||[0,0];bm[k][1]+=x.q;if(isoW(x.f)==w)bm[k][0]+=x.q});
+ $('sm').innerHTML=Object.keys(bm).sort().map(k=>`<tr><td>${esc(k)}</td><td class="n">${fl(bm[k][0])}</td><td class="n">${fl(bm[k][1])}</td></tr>`).join('');
+ const mo=erogMese(cur);$('mo').innerHTML=Object.keys(mo).sort().reverse().map(k=>`<tr><td>${mName(k)}</td><td class="n">${fl(mo[k])}</td></tr>`).join('');
+ $('pr').innerHTML=Object.keys(P).map(p=>`<tr><td>${P[p]}</td><td class="n">${fl(D[p].filter(x=>isoW(x.f)==w).reduce((t,x)=>t+x.q,0))} L</td><td class="n">${fl(D[p].reduce((t,x)=>t+x.q,0))} L</td></tr>`).join('')}
+function save(){const f=$('f').value,m=$('m').value.trim().toUpperCase().replace(/\s|-/g,''),r=$('r').value.trim(),q=parseFloat($('q').value),km=parseFloat($('km').value)||null;
+ if(!f||!m||!(q>0))return alert('Compila data, targa e litri (> 0)');const o={f,m,r,q};if(km)o.km=km;
+ if(ed){const x=D[cur].find(x=>x.id==ed);Object.assign(x,o);if(!km)delete x.km}else D[cur].push(Object.assign({id:uid()},o));st();$('wk').value=isoW(f);resetF();render()}
+function edit(id){const x=D[cur].find(x=>x.id==id);ed=id;$('f').value=x.f;$('m').value=x.m;$('r').value=x.r;$('q').value=x.q;$('km').value=x.km||'';$('sb').textContent='Salva modifica';$('ft').textContent='Modifica rifornimento';scrollTo(0,0)}
+function del(id){if(confirm('Eliminare questa riga?')){D[cur]=D[cur].filter(x=>x.id!=id);st();render()}}
+function resetF(){ed=null;$('f').value=today();$('m').value=$('r').value=$('q').value=$('km').value='';$('sb').textContent='Aggiungi';$('ft').textContent='Nuovo rifornimento – '+P[cur]}
+function rRiep(){const pm=perMese(),ms=[...new Set(D.FATTURE.map(mese))].sort(),eA=erogMese('GASOLEO_A'),eB=erogMese('GASOLEO_B'),s=saldoA(),C=consumi(),m=M();
+ const tb=t=>{let T={l:0,imp:0,iva:0,tot:0,n:0};const rows=ms.map(k=>{const a=pm[k+'|'+t];const e=(t=='A'?eA:eB)[k]||0;if(a){T.l+=a.l;T.imp+=a.imp;T.iva+=a.iva;T.tot+=a.tot;T.n+=a.n}
+  return`<tr class="${a?'':'warn'}"><td>${mName(k)}</td><td class="n">${a?fl(a.l):'0'}</td><td class="n">${a?fmt(a.imp):'—'}</td><td class="n">${a?fmt(a.iva):'—'}</td><td class="n">${a?fmt(a.tot):'—'}</td><td class="n">${a?fmt(a.imp/a.l,4):'—'}</td><td class="n">${a?fmt(a.tot/a.l,4):'—'}</td><td class="n">${a?a.n:0}</td><td class="n">${e?fl(e):''}</td></tr>`}).join('');
+  return`<div class="card"><h3><span class="badge b${t}">${TN[t]}</span> acquisti per mese (mese di consegna)</h3><table><thead><tr><th>Mese</th><th class="n">Litri</th><th class="n">Spesa netta €</th><th class="n">IVA €</th><th class="n">Totale €</th><th class="n">Netto medio ponderato €/L</th><th class="n">Lordo €/L</th><th class="n">Righe</th><th class="n">Erogati ai mezzi L</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="muted">Nessun dato</td></tr>'}</tbody>${T.l?`<tfoot><tr><th>Totale</th><th class="n">${fl(T.l)}</th><th class="n">${fmt(T.imp)}</th><th class="n">${fmt(T.iva)}</th><th class="n">${fmt(T.tot)}</th><th class="n">${fmt(T.imp/T.l,4)}</th><th class="n">${fmt(T.tot/T.l,4)}</th><th class="n">${T.n}</th><th></th></tr></tfoot>`:''}</table><p class="muted">Righe gialle: mese senza consegne di ${TN[t]}.</p></div>`};
+ const ct=Object.keys(C).sort().map(t=>{const c=C[t];return`<tr><td>${esc(t)}</td><td class="n">${c.n}</td><td class="n">${fl(c.tot)}</td><td class="n">${c.KM?fl(c.KM):'—'}</td><td class="n">${c.c?fmt(c.c,1):'—'}</td><td class="n">${c.iv.length?fmt(c.iv[c.iv.length-1].c,1):'—'}</td></tr>`}).join('');
+ $('s-riep').innerHTML=tb('A')+tb('B')+`<div class="grid"><div class="card"><h3>Saldo stimato cisterna A (capienza ${fl(m.capienzaA)} L)</h3>${s?`<p>Saldo stimato oggi: <span class="tot ${s.v<0||s.v>m.capienzaA?'bad':''}">${fl(s.v)} L</span></p><p class="muted">Lettura iniziale ${fl(s.base.litri)} L il ${fd(s.base.data)} + acquisti ${fl(s.acq)} L − erogazioni ${fl(s.ero)} L. È una stima: torna solo se ogni erogazione è registrata.</p>`:'<p class="muted">Nessuna lettura iniziale. Le fatture da sole non bastano: serve sapere quanto c’era in cisterna un certo giorno.</p>'}
+ <div class="row np"><label>Data lettura<input type="date" id="sa_d" value="${s?s.base.data:today()}"></label><label>Litri in cisterna (lettura)<input type="number" id="sa_l" value="${s?s.base.litri:''}"></label><button onclick="setSaldo()">Imposta lettura</button></div></div>
+ <div class="card"><h3>Consumo L/100 km per targa (Gasóleo A)</h3><table><thead><tr><th>Targa</th><th class="n">Rifornimenti</th><th class="n">Litri</th><th class="n">Km misurati</th><th class="n">L/100 km medio</th><th class="n">Ultimo intervallo</th></tr></thead><tbody>${ct||'<tr><td colspan="6" class="muted">Nessun rifornimento di gasolio A registrato. Il consumo compare quando ci sono almeno due rifornimenti con i km.</td></tr>'}</tbody></table><p class="muted">Metodo «pieno su pieno»: litri dei rifornimenti successivi diviso km percorsi tra due letture.</p></div></div>
+ <div class="card np"><button onclick="csvMese()">Esporta CSV riepilogo mensile</button></div>`}
+function setSaldo(){const d=$('sa_d').value,l=parseFloat($('sa_l').value);if(!d||isNaN(l))return alert('Inserisci data e litri');D.META.saldoA={data:d,litri:l};st();render()}
+function rScad(){const T=today();const inv={};D.FATTURE.forEach(x=>{const k=x.num;const v=inv[k]=inv[k]||{num:k,f:x.f,scad:x.scad,forn:x.forn,tot:0,stati:new Set(),tipi:new Set()};v.tot+=x.tot;v.stati.add(x.stato);v.tipi.add(x.tipo)});
+ const L=Object.values(inv).sort((a,b)=>(a.scad||'9').localeCompare(b.scad||'9'));const aperte=L.filter(v=>v.stati.has('da pagare')||v.stati.has('da verificare'));
+ const F=[...D.FISCALE].sort((a,b)=>(a.data||'9999').localeCompare(b.data||'9999'));
+ $('s-scad').innerHTML=`<div class="card"><h2>Pagamenti fornitori da fare</h2><table><thead><tr><th>Scadenza</th><th>Fattura</th><th>Data</th><th>Fornitore</th><th>Tipi</th><th class="n">Totale €</th><th>Stato</th><th class="np"></th></tr></thead><tbody>${aperte.map(v=>{const g=v.scad?dd(T,v.scad):null;return`<tr class="${g!==null&&g<0?'bad':g!==null&&g<=7?'warn':''}"><td>${fd(v.scad)}${g!==null?` <span class="muted">(${g<0?'scaduta da '+(-g)+' gg':'tra '+g+' gg'})</span>`:''}</td><td>${esc(v.num)}</td><td>${fd(v.f)}</td><td>${esc(v.forn)}</td><td>${[...v.tipi].join(', ')}</td><td class="n">${fmt(v.tot)}</td><td>${[...v.stati].join(', ')}</td><td class="np"><button class="sm" onclick="setStato('${v.num}','pagato')">✔ pagato</button></td></tr>`}).join('')||'<tr><td colspan="8" class="muted">Nessun pagamento aperto</td></tr>'}</tbody>
+ <tfoot><tr><th colspan="5">Totale aperto</th><th class="n">${fmt(aperte.reduce((a,v)=>a+v.tot,0))}</th><th colspan="2"></th></tr></tfoot></table><p class="muted">«Presunto pagato» = scadenza passata con addebito diretto, ma non controllato sull’estratto conto.</p></div>
+ <div class="card"><h2>Scadenziario fiscale del gasolio</h2><p class="muted">Avviso in alto quando mancano meno di 30 giorni. <span class="badge bVer">verificato</span> = letto su fonte ufficiale (AEAT/BOE); <span class="badge bIp">ipotesi</span> = da confermare con la gestoría.</p>
+ <table><thead><tr><th>Data</th><th>Scadenza</th><th>Dettagli</th><th>Fonte</th><th>Dato</th><th>Fatto</th><th class="np"></th></tr></thead><tbody>${F.map(x=>{const g=x.data?dd(T,x.data):null;return`<tr class="${x.fatto?'ok':g!==null&&g<0?'bad':g!==null&&g<30?'warn':''}"><td>${x.data?fd(x.data):'<i>senza data</i>'}</td><td><b>${esc(x.titolo)}</b></td><td class="muted">${esc(x.descr)}</td><td>${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.fonte)}</a>`:esc(x.fonte)}</td><td><span class="badge ${x.stato=='verificato'?'bVer':'bIp'}">${esc(x.stato)}</span></td><td><input type="checkbox" ${x.fatto?'checked':''} onchange="fisFatto('${x.id}',this.checked)"></td><td class="np"><button class="sm" onclick="fisDel('${x.id}')">🗑️</button></td></tr>`}).join('')}</tbody></table>
+ <h3 style="margin-top:12px">Aggiungi scadenza</h3><div class="row np"><label>Data<input type="date" id="fi_d"></label><label style="flex:3">Scadenza<input id="fi_t"></label><label style="flex:2">Fonte (link o nome)<input id="fi_f"></label><label>Dato<select id="fi_s"><option>verificato</option><option>ipotesi</option></select></label><button class="pri" onclick="fisAdd()">Aggiungi</button></div></div>
+ <div class="card"><h2>Gasóleo profesional: cosa serve (fonti ufficiali)</h2><ul>
+ <li><b>Veicoli ammessi:</b> mezzi destinati solo al trasporto merci su strada, per conto proprio o di terzi, con massa massima autorizzata <b>uguale o superiore a 7,5 t</b>. <span class="badge bVer">verificato</span> <a href="https://sede.agenciatributaria.gob.es/Sede/todas-gestiones/beneficios-fiscales-autorizaciones/medidas-tributari_____ica-derivada-conflicto-belico-medio/ayuda-sufragar-precio-gasoleo-consumido-devolucion/preguntas-frecuentes.html" target="_blank" rel="noopener">AEAT</a></li>
+ <li><b>Censo:</b> iscrizione al Censo de beneficiarios y vehículos <b>prima</b> dei consumi, con il modulo online «gasóleo profesional» della sede AEAT (procedura DL01): targa, data d’inizio, massa massima e tarjeta de transporte di ogni veicolo. <span class="badge bVer">verificato</span> <a href="https://sede.agenciatributaria.gob.es/Sede/impuestos-especiales-medioambientales/devoluciones-gasoleo-profesional/procedimiento-devolucion.html" target="_blank" rel="noopener">AEAT</a>. Il <b>modelo 308</b> invece è un modulo IVA (recargo de equivalencia, art. 30 bis RIVA, soggetti occasionali) e non risulta collegato al censo. <span class="badge bVer">verificato</span> <a href="https://sede.agenciatributaria.gob.es/Sede/procedimientos/G403.shtml" target="_blank" rel="noopener">AEAT G403</a></li>
+ <li><b>Tarjeta gasóleo profesional:</b> obbligatoria per i rifornimenti nei distributori (vendita al dettaglio). Il suo uso vale come domanda. <span class="badge bVer">verificato</span></li>
+ <li><b>Deposito proprio in piazzale:</b> ammesso <b>solo</b> se l’impianto è iscritto al Registro Territorial di Impuestos Especiales con <b>CAE</b>, ha un <b>sistema informatico contabile integrato con l’erogatore</b> e si presenta ogni mese, entro una settimana dalla fine del mese, la relazione delle erogazioni ai veicoli autorizzati <b>del titolare</b>. Le erogazioni ai mezzi di terzi (autonomi) non danno diritto. <span class="badge bVer">verificato</span> <a href="https://sede.agenciatributaria.gob.es/Sede/impuestos-especiales-medioambientales/devoluciones-gasoleo-profesional/instalaciones-consumo-propio.html" target="_blank" rel="noopener">AEAT</a></li>
+ <li><b>Limite:</b> massimo 50.000 L per veicolo e per anno. <span class="badge bVer">verificato</span></li>
+ <li><b>Pagamento:</b> a fine mese l’AEAT calcola e paga con bonifico sul conto indicato nel censo. Il tipo applicato è quello in vigore alla data di ogni rifornimento. <span class="badge bVer">verificato</span></li></ul>
+ <h3>Importi per periodo</h3><table><thead><tr><th>Periodo dei rifornimenti</th><th>Devolución (art. 52 bis LIE)</th><th>Ayuda extraordinaria</th><th>Stato</th><th>Fonte</th></tr></thead><tbody>${TIPI.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td><a href="${r[5]}" target="_blank" rel="noopener">${r[4]}</a></td></tr>`).join('')}</tbody></table>
+ <p class="muted">Le ayudas si gestiscono con la stessa procedura della devolución (censo, tarjeta o relazione mensile del deposito proprio). Aggiornato al 10/11/2026.</p></div>`}
+function fisFatto(id,v){D.FISCALE.find(x=>x.id==id).fatto=v;st();render()}
+function fisDel(id){if(confirm('Eliminare questa scadenza?')){D.FISCALE=D.FISCALE.filter(x=>x.id!=id);D.META.fisDel=[...(D.META.fisDel||[]),id];st();render()}}
+function fisAdd(){const d=$('fi_d').value,t=$('fi_t').value.trim();if(!t)return alert('Scrivi la scadenza');D.FISCALE.push({id:uid(),data:d,titolo:t,descr:'',fonte:$('fi_f').value.trim(),url:/^https?:/.test($('fi_f').value.trim())?$('fi_f').value.trim():'',stato:$('fi_s').value,fatto:false});st();render()}
+function rCtrl(){const c=controlli(),cls={errore:'bad',avviso:'warn',info:'info'};const cats={};c.forEach(x=>cats[x.cat]=(cats[x.cat]||0)+1);
+ $('s-ctrl').innerHTML=`<div class="card"><h2>Controlli automatici</h2><p>${c.filter(x=>x.liv=='errore').length} errori · ${c.filter(x=>x.liv=='avviso').length} avvisi · ${c.filter(x=>x.liv=='info').length} note. Soglie modificabili in «Dati e backup».</p><p class="muted">${Object.entries(cats).map(([k,v])=>`${esc(k)}: ${v}`).join(' · ')}</p>
+ <table><thead><tr><th>Livello</th><th>Tipo</th><th>Dettaglio</th></tr></thead><tbody>${c.map(x=>`<tr class="${cls[x.liv]}"><td>${x.liv}</td><td>${esc(x.cat)}</td><td>${esc(x.t)}</td></tr>`).join('')||'<tr><td colspan="3" class="ok">Nessuna anomalia</td></tr>'}</tbody></table>
+ <p class="np"><button onclick="csvCtrl()">Esporta CSV controlli</button></p></div>`}
+function rDati(){const m=M();$('set_cap').value=m.capienzaA;$('set_pr').value=m.sogliaPrezzo;$('set_gap').value=m.sogliaBuchiA;$('set_cons').value=m.sogliaConsumo}
+function saveSet(){D.META.capienzaA=+$('set_cap').value||5000;D.META.sogliaPrezzo=+$('set_pr').value||3;D.META.sogliaBuchiA=+$('set_gap').value||8;D.META.sogliaConsumo=+$('set_cons').value||15;st();alert('Impostazioni salvate')}
+/* ---------- export / import ---------- */
+function xls(){const r=[...D[cur]].sort((a,b)=>a.f.localeCompare(b.f));dl(cur+'.csv','\ufeff'+['SEMANA;FECHA;MATRICULA;REPOSTADOR;CANTIDAD (L);KM',...r.map(x=>[isoW(x.f),fd(x.f),cq(x.m),cq(x.r),cn(x.q),x.km||''].join(';'))].join('\r\n'),'text/csv')}
+function csvAll(){const L=['PRODUCTO;FECHA;MATRICULA;REPOSTADOR;CANTIDAD (L);KM'];for(const p in P)D[p].forEach(x=>L.push([p,x.f,cq(x.m),cq(x.r),cn(x.q),x.km||''].join(';')));dl('gasolio_rifornimenti.csv','\ufeff'+L.join('\r\n'),'text/csv')}
+function csvFatt(){csv('gasolio_fatture.csv',[['Data fattura','Data consegna','Numero','Rif','Fornitore','Tipo','Litri','Imponibile','IVA %','IVA','Totale','Netto €/L','Lordo €/L','P.Un fattura','Scadenza','Stato','Dato','Note'],...fattSorted().map(x=>[x.f,x.cons,x.num,x.rif,x.forn,x.tipo,x.l,x.imp,x.ivaP,x.ivaE,x.tot,r2(x.imp/x.l*1e4)/1e4,r2(x.tot/x.l*1e4)/1e4,x.pu||'',x.scad,x.stato,x.fonte,x.note])])}
+function csvMese(){const pm=perMese(),eA=erogMese('GASOLEO_A'),eB=erogMese('GASOLEO_B');const rows=[['Mese','Tipo','Litri','Spesa netta','IVA','Totale','Netto medio €/L','Lordo €/L','Righe','Erogati L']];Object.keys(pm).sort().forEach(k=>{const[m,t]=k.split('|'),a=pm[k];rows.push([m,t,a.l,r2(a.imp),r2(a.iva),r2(a.tot),r2(a.imp/a.l*1e4)/1e4,r2(a.tot/a.l*1e4)/1e4,a.n,(t=='A'?eA:eB)[m]||0])});csv('gasolio_riepilogo_mensile.csv',rows)}
+function csvCtrl(){csv('gasolio_controlli.csv',[['Livello','Tipo','Dettaglio'],...controlli().map(x=>[x.liv,x.cat,x.t])])}
+function csvScad(){csv('gasolio_scadenze.csv',[['Data','Scadenza','Fonte','Link','Dato','Fatto'],...D.FISCALE.map(x=>[x.data,x.titolo,x.fonte,x.url,x.stato,x.fatto?'sì':'no']),...D.FATTURE.filter(x=>x.stato!='pagato').map(x=>[x.scad,'Pagamento fattura '+x.num+' ('+x.tipo+')',x.forn,'',x.stato,''])])}
 function jsonOut(){dl('gasolio_backup_'+today()+'.json',JSON.stringify(D,null,1),'application/json')}
-function imp(inp){const fl=inp.files[0];if(!fl)return;fl.text().then(t=>{try{let n;if(fl.name.endsWith('.json')){n=JSON.parse(t);for(const p in P)if(!Array.isArray(n[p]))n[p]=[]}else{n={};for(const p in P)n[p]=[];t.replace(/^\ufeff/,'').split(/\r?\n/).slice(1).forEach(l=>{if(!l.trim())return;const c=l.split(';').map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));let p=c[0],f=c[1];if(!P[p]){p=cur;f=c[1]}if(/\//.test(f))f=f.split('/').reverse().join('-');n[p].push({id:Math.random().toString(36).slice(2),f,m:c[2],r:c[3],q:parseFloat(c[4].replace(',','.'))})})}
-if(confirm('Unire ai dati esistenti? (Annulla = sostituire tutto)')){for(const p in P){const ids=new Set(D[p].map(x=>x.id));n[p].forEach(x=>{if(!ids.has(x.id))D[p].push(x)})}}else D=n;st();render();alert('Importazione completata')}catch(e){alert('File non valido: '+e.message)}inp.value=''})}
-$('wk').value=isoW(today());$('wk').onchange=render;resetF();render();
+function imp(inp){const f=inp.files[0];if(!f)return;f.text().then(t=>{try{let n;
+ if(f.name.toLowerCase().endsWith('.json')){n=norm(JSON.parse(t))}else{n=blank();t.replace(/^\ufeff/,'').split(/\r?\n/).slice(1).forEach(l=>{if(!l.trim())return;const c=l.split(';').map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"'));let p=c[0],fd2=c[1];if(!P[p])p=cur;if(/\//.test(fd2))fd2=fd2.split('/').reverse().join('-');const x={id:Math.random().toString(36).slice(2),f:fd2,m:c[2],r:c[3],q:parseFloat(String(c[4]).replace(',','.'))};if(c[5])x.km=parseFloat(c[5]);n[p].push(x)})}
+ if(n.FATTURE.some(x=>hasBank(x.note)))return alert('Il file contiene dati bancari nelle note: importazione annullata.');
+ const tot=['ADBLUE','GASOLEO_B','GASOLEO_A','FATTURE'].reduce((a,k)=>a+n[k].length,0);
+ if(confirm(`Il file contiene ${n.FATTURE.length} righe di fattura e ${tot-n.FATTURE.length} rifornimenti.\n\nOK = unisci ai dati esistenti (le righe già presenti non vengono duplicate)\nAnnulla = sostituisci tutto`)){
+  ['ADBLUE','GASOLEO_B','GASOLEO_A','FATTURE','FISCALE'].forEach(k=>{const ids=new Set(D[k].map(x=>x.id));n[k].forEach(x=>{if(!ids.has(x.id))D[k].push(x)})});D.META=Object.assign({},n.META,D.META,{targhe:D.META.targhe||n.META.targhe})}
+ else D=n;ensureDef();st();if(!fed)fReset();render();alert('Importazione completata')}catch(e){alert('File non valido: '+e.message)}inp.value=''})}
+/* ---------- avvio ---------- */
+$('wk').value=isoW(today());$('wk').onchange=render;resetF();fReset();render();window.onhashchange=()=>{const h=location.hash.slice(1);if(TABS[h]&&h!=tab){tab=h;render()}};
 </script></body></html>
